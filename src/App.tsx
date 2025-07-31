@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, type UrineEntry as DBUrineEntry, type DressingEntry as DBDressingEntry } from './lib/supabase';
-import { Droplets, User, Calendar, Clock, Download, TrendingUp } from 'lucide-react';
+import { Droplets, User, Calendar, Clock, Download, TrendingUp, Scale } from 'lucide-react';
 import { parseISO, format } from 'date-fns';
 import { toZonedTime } from 'date-fns-tz';
 import * as XLSX from 'xlsx';
@@ -27,78 +27,15 @@ interface DressingEntry {
   timestamp: number;
 }
 
-// Helper function for timezone conversion
-function convertUTCtoNYC(utcString: string) {
-  const date = new Date(utcString);
-  return date.toLocaleString('en-US', {
-    timeZone: 'America/New_York',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  });
-}
-
-function formatDateToNYC(dateString: string) {
-  const date = new Date(dateString);
-  return date.toLocaleString('en-US', {
-    timeZone: 'America/New_York',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  });
-}
-
-// Helper function to get current NYC date in YYYY-MM-DD format
 function getNYCDate() {
   return new Date().toLocaleDateString('en-CA', {
     timeZone: 'America/New_York'
   });
 }
 
-// Helper function to get current NYC datetime for datetime-local input
-function getCurrentNYCDateTime() {
-  const now = new Date();
-  const nycTime = now.toLocaleString('en-US', {
-    timeZone: 'America/New_York',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false
-  });
-  
-  // Parse the formatted string and convert to YYYY-MM-DDTHH:MM format
-  const [datePart, timePart] = nycTime.split(', ');
-  const [month, day, year] = datePart.split('/');
-  const [hour, minute] = timePart.split(':');
-  return `${year}-${month}-${day}T${hour}:${minute}`;
-}
-
-// Helper function to get current NYC time string
-function getNYCTimeString() {
-  return new Date().toLocaleString('en-US', {
-    timeZone: 'America/New_York',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  });
-}
-
-// Helper function to convert NYC date/time to UTC timestamp
 function nycToUTC(dateStr: string, timeStr: string): string {
-  // Create a date string in NYC timezone
   const nycDateTime = `${dateStr}T${timeStr}:00`;
-  
-  // Use date-fns-tz to convert NYC time to UTC
   const nycDate = toZonedTime(new Date(nycDateTime), 'America/New_York');
-  
   return nycDate.toISOString();
 }
 
@@ -109,7 +46,43 @@ function App() {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  // Load data from Supabase on component mount
+  const [urineFormData, setUrineFormData] = useState({
+    enteredBy: '',
+    date: getNYCDate(),
+    time: new Date().toLocaleTimeString('en-US', {
+      timeZone: 'America/New_York',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }),
+    amount: '',
+    urineColors: {
+      clear: false,
+      yellow: false,
+      yellowGreen: false,
+      darkYellow: false,
+      yellowRed: false
+    }
+  });
+
+  const [dressingFormData, setDressingFormData] = useState({
+    enteredBy: '',
+    date: getNYCDate(),
+    time: new Date().toLocaleTimeString('en-US', {
+      timeZone: 'America/New_York',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    }),
+    weight: '',
+    drainageTypes: {
+      serousDrainage: false,
+      serosanguinousFluid: false,
+      purulentDrainage: false,
+      urine: false
+    }
+  });
+
   useEffect(() => {
     loadData();
   }, []);
@@ -191,46 +164,7 @@ function App() {
       setIsLoading(false);
     }
   };
-  
-  // Form state for urine output
-  const [urineFormData, setUrineFormData] = useState({
-    enteredBy: '',
-    date: getNYCDate(),
-    time: new Date().toLocaleTimeString('en-US', {
-      timeZone: 'America/New_York',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    }),
-    amount: '',
-    urineColors: {
-      clear: false,
-      yellow: false,
-      yellowGreen: false,
-      darkYellow: false,
-      yellowRed: false
-    }
-  });
 
-  // Form state for dressing change
-  const [dressingFormData, setDressingFormData] = useState({
-    enteredBy: '',
-    date: getNYCDate(),
-    time: new Date().toLocaleTimeString('en-US', {
-      timeZone: 'America/New_York',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    }),
-    weight: '',
-    drainageTypes: {
-      serousDrainage: false,
-      serosanguinousFluid: false,
-      purulentDrainage: false,
-      urine: false
-    }
-  });
-  
   const handlePasscodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     if (value === '' || (/^\d{1,4}$/.test(value))) {
@@ -372,8 +306,6 @@ function App() {
           default: return type;
         }
       });
-
-
 
     // Create timestamp treating the input as NYC time
     const timestamp = new Date(`${dressingFormData.date}T${dressingFormData.time}:00`);
@@ -544,7 +476,6 @@ function App() {
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8 text-center relative">
-          {/* Export Button */}
           <div className="flex flex-col sm:flex-row items-center justify-between mb-4 space-y-4 sm:space-y-0">
             <div className="flex items-center justify-center sm:justify-start">
               <Droplets className="w-10 h-10 text-yellow-500 mr-3" />
@@ -596,9 +527,8 @@ function App() {
           </div>
         </div>
 
-        <div className="transition-opacity duration-300">
-          {/* Calculation Information */}
-          <div className="mb-8 bg-yellow-25 rounded-lg p-4 max-w-2xl mx-auto">
+        {/* Calculation Information */}
+        <div className="mb-8 bg-yellow-25 rounded-lg p-4 max-w-2xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
             <div className="flex items-center">
               <div className="w-2 h-2 bg-yellow-400 rounded-full mr-3"></div>
@@ -625,21 +555,21 @@ function App() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
             <div className="text-center">
               <span className="block text-gray-600 text-sm mb-1">Date:</span>
-              <span className="font-medium text-lg">{new Date().toLocaleDateString('en-US')}</span>
+              <span className="font-medium text-lg">{new Date().toLocaleDateString('en-US', { timeZone: 'America/New_York' })}</span>
             </div>
             <div className="text-center">
               <span className="block text-gray-600 text-sm mb-1">Total Output:</span>
-              <span className="text-black font-medium text-lg">{entries.filter(e => e.date === new Date().toISOString().split('T')[0]).reduce((total, entry) => total + entry.amount, 0)} mL</span>
+              <span className="text-black font-medium text-lg">{entries.filter(e => e.date === getNYCDate()).reduce((total, entry) => total + entry.amount, 0)} mL</span>
             </div>
             <div className="text-center">
               <span className="block text-gray-600 text-sm mb-1">Entries:</span>
-              <span className="font-medium text-lg">{entries.filter(e => e.date === new Date().toISOString().split('T')[0]).length}</span>
+              <span className="font-medium text-lg">{entries.filter(e => e.date === getNYCDate()).length}</span>
             </div>
             <div className="text-center">
               <span className="block text-gray-600 text-sm mb-1">Hourly Average:</span>
               <span className="font-medium text-lg text-gray-800">
-                {entries.filter(e => e.date === new Date().toISOString().split('T')[0]).length > 0 
-                  ? Math.round(entries.filter(e => e.date === new Date().toISOString().split('T')[0]).reduce((total, entry) => total + entry.amount, 0) / 24)
+                {entries.filter(e => e.date === getNYCDate()).length > 0 
+                  ? Math.round(entries.filter(e => e.date === getNYCDate()).reduce((total, entry) => total + entry.amount, 0) / 24)
                   : 0} mL/hr
               </span>
             </div>
@@ -647,7 +577,7 @@ function App() {
               <span className="block text-gray-600 text-sm mb-1">Urine Leak (Y/N):</span>
               <span className="font-medium text-lg text-black">
                 {dressingEntries.filter(entry => 
-                  entry.date === new Date().toISOString().split('T')[0] && 
+                  entry.date === getNYCDate() && 
                   entry.drainageTypes.includes('Urine')
                 ).length > 0 ? 'Yes' : 'No'}
               </span>
@@ -655,542 +585,563 @@ function App() {
           </div>
         </div>
 
+        {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Input Form */}
-            <div className="lg:col-span-1">
-              <div className={`bg-white rounded-xl shadow-lg p-6 transition-opacity duration-300 ${!isUnlocked ? 'opacity-50 pointer-events-none' : ''}`}>
-                <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-                  Add Urine Output New Entry
-                </h2>
-                
-                <form onSubmit={handleUrineSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      <User className="w-4 h-4 inline mr-1" />
-                      Entered By
-                    </label>
-                    <select 
-                      value={urineFormData.enteredBy}
-                      onChange={(e) => setUrineFormData({...urineFormData, enteredBy: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                      disabled={!isUnlocked}
-                    >
-                      <option value="">Select person</option>
-                      <option value="Joe">Joe</option>
-                      <option value="Tori">Tori</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      <Calendar className="w-4 h-4 inline mr-1" />
-                      Date
-                    </label>
-                    <input
-                      type="date"
-                      value={urineFormData.date}
-                      onChange={(e) => setUrineFormData({...urineFormData, date: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                      disabled={!isUnlocked}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      <Clock className="w-4 h-4 inline mr-1" />
-                      Time
-                    </label>
-                    <input
-                      type="time"
-                      value={urineFormData.time}
-                      onChange={(e) => setUrineFormData({...urineFormData, time: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                      disabled={!isUnlocked}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      <Droplets className="w-4 h-4 inline mr-1" />
-                      Amount (mL)
-                    </label>
-                    <input
-                      type="text"
-                      value={urineFormData.amount}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value === '' || /^\d+$/.test(value)) {
-                          setUrineFormData({...urineFormData, amount: value});
-                        }
-                      }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                      placeholder="Enter amount in mL"
-                      disabled={!isUnlocked}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Urine Color
-                    </label>
-                    <div className="space-y-2">
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={urineFormData.urineColors.clear}
-                          onChange={(e) => setUrineFormData({
-                            ...urineFormData,
-                            urineColors: { ...urineFormData.urineColors, clear: e.target.checked }
-                          })}
-                          className="mr-2"
-                          disabled={!isUnlocked}
-                        />
-                        Clear
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={urineFormData.urineColors.yellow}
-                          onChange={(e) => setUrineFormData({
-                            ...urineFormData,
-                            urineColors: { ...urineFormData.urineColors, yellow: e.target.checked }
-                          })}
-                          className="mr-2"
-                          disabled={!isUnlocked}
-                        />
-                        Yellow
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={urineFormData.urineColors.yellowGreen}
-                          onChange={(e) => setUrineFormData({
-                            ...urineFormData,
-                            urineColors: { ...urineFormData.urineColors, yellowGreen: e.target.checked }
-                          })}
-                          className="mr-2"
-                          disabled={!isUnlocked}
-                        />
-                        Yellow-Green
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={urineFormData.urineColors.darkYellow}
-                          onChange={(e) => setUrineFormData({
-                            ...urineFormData,
-                            urineColors: { ...urineFormData.urineColors, darkYellow: e.target.checked }
-                          })}
-                          className="mr-2"
-                          disabled={!isUnlocked}
-                        />
-                        Dark Yellow
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={urineFormData.urineColors.yellowRed}
-                          onChange={(e) => setUrineFormData({
-                            ...urineFormData,
-                            urineColors: { ...urineFormData.urineColors, yellowRed: e.target.checked }
-                          })}
-                          className="mr-2"
-                          disabled={!isUnlocked}
-                        />
-                        Yellow-Red (Blood)
-                      </label>
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    className={`w-full py-2 px-4 rounded-lg font-medium transition-colors duration-200 ${
-                      isUnlocked 
-                        ? 'bg-yellow-500 text-white hover:bg-yellow-600' 
-                        : 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                    }`}
+          {/* Forms Section */}
+          <div className="lg:col-span-1">
+            {/* Urine Output Form */}
+            <div className={`bg-white rounded-xl shadow-lg p-6 transition-opacity duration-300 ${!isUnlocked ? 'opacity-50 pointer-events-none' : ''}`}>
+              <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                Add New Urine Output Entry
+              </h2>
+              <form onSubmit={handleUrineSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Entered By
+                  </label>
+                  <select
+                    value={urineFormData.enteredBy}
+                    onChange={(e) => setUrineFormData({...urineFormData, enteredBy: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
                     disabled={!isUnlocked}
                   >
-                    Add Urine Entry
-                  </button>
-                </form>
-              </div>
+                    <option value="">Select person</option>
+                    <option value="Joe">Joe</option>
+                    <option value="Tori">Tori</option>
+                  </select>
+                </div>
 
-              {/* Dressing Change Form */}
-              <div className={`bg-white rounded-xl shadow-lg p-6 mt-6 transition-opacity duration-300 ${!isUnlocked ? 'opacity-50 pointer-events-none' : ''}`}>
-                <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-                  Add New Dressing Change Entry
-                </h2>
-                
-                <form onSubmit={handleDressingSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      <User className="w-4 h-4 inline mr-1" />
-                      Entered By
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <Calendar className="w-4 h-4 mr-1" />
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    value={urineFormData.date}
+                    onChange={(e) => setUrineFormData({...urineFormData, date: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                    disabled={!isUnlocked}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <Clock className="w-4 h-4 mr-1" />
+                    Time
+                  </label>
+                  <input
+                    type="time"
+                    value={urineFormData.time}
+                    onChange={(e) => setUrineFormData({...urineFormData, time: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                    disabled={!isUnlocked}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <Droplets className="w-4 h-4 mr-1" />
+                    Amount (mL)
+                  </label>
+                  <input
+                    type="text"
+                    value={urineFormData.amount}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || /^\d+$/.test(value)) {
+                        setUrineFormData({...urineFormData, amount: value});
+                      }
+                    }}
+                    placeholder="Enter amount in mL"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                    disabled={!isUnlocked}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Urine Color
+                  </label>
+                  <div className="space-y-2">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={urineFormData.urineColors.clear}
+                        onChange={(e) => setUrineFormData({
+                          ...urineFormData,
+                          urineColors: {
+                            ...urineFormData.urineColors,
+                            clear: e.target.checked
+                          }
+                        })}
+                        className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        disabled={!isUnlocked}
+                      />
+                      <span className="text-sm text-gray-700">Clear</span>
                     </label>
-                    <select 
-                      value={dressingFormData.enteredBy}
-                      onChange={(e) => setDressingFormData({...dressingFormData, enteredBy: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      disabled={!isUnlocked}
-                    >
-                      <option value="">Select person</option>
-                      <option value="Joe">Joe</option>
-                      <option value="Tori">Tori</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      <Calendar className="w-4 h-4 inline mr-1" />
-                      Date
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={urineFormData.urineColors.yellow}
+                        onChange={(e) => setUrineFormData({
+                          ...urineFormData,
+                          urineColors: {
+                            ...urineFormData.urineColors,
+                            yellow: e.target.checked
+                          }
+                        })}
+                        className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        disabled={!isUnlocked}
+                      />
+                      <span className="text-sm text-gray-700">Yellow</span>
                     </label>
-                    <input
-                      type="date"
-                      value={dressingFormData.date}
-                      onChange={(e) => setDressingFormData({...dressingFormData, date: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      disabled={!isUnlocked}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      <Clock className="w-4 h-4 inline mr-1" />
-                      Time
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={urineFormData.urineColors.yellowGreen}
+                        onChange={(e) => setUrineFormData({
+                          ...urineFormData,
+                          urineColors: {
+                            ...urineFormData.urineColors,
+                            yellowGreen: e.target.checked
+                          }
+                        })}
+                        className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        disabled={!isUnlocked}
+                      />
+                      <span className="text-sm text-gray-700">Yellow-Green</span>
                     </label>
-                    <input
-                      type="time"
-                      value={dressingFormData.time}
-                      onChange={(e) => setDressingFormData({...dressingFormData, time: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      disabled={!isUnlocked}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Weight (g)
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={urineFormData.urineColors.darkYellow}
+                        onChange={(e) => setUrineFormData({
+                          ...urineFormData,
+                          urineColors: {
+                            ...urineFormData.urineColors,
+                            darkYellow: e.target.checked
+                          }
+                        })}
+                        className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        disabled={!isUnlocked}
+                      />
+                      <span className="text-sm text-gray-700">Dark Yellow</span>
                     </label>
-                    <input
-                      type="text"
-                      value={dressingFormData.weight}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        if (value === '' || /^\d*\.?\d*$/.test(value)) {
-                          setDressingFormData({...dressingFormData, weight: value});
-                        }
-                      }}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Enter weight in grams"
-                      disabled={!isUnlocked}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Drainage Types
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={urineFormData.urineColors.yellowRed}
+                        onChange={(e) => setUrineFormData({
+                          ...urineFormData,
+                          urineColors: {
+                            ...urineFormData.urineColors,
+                            yellowRed: e.target.checked
+                          }
+                        })}
+                        className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        disabled={!isUnlocked}
+                      />
+                      <span className="text-sm text-gray-700">Yellow-Red (Blood)</span>
                     </label>
-                    <div className="space-y-2">
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={dressingFormData.drainageTypes.serousDrainage}
-                          onChange={(e) => setDressingFormData({
-                            ...dressingFormData,
-                            drainageTypes: {
-                              ...dressingFormData.drainageTypes,
-                              serousDrainage: e.target.checked
-                            }
-                          })}
-                          className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          disabled={!isUnlocked}
-                        />
-                        <span className="text-sm text-gray-700">Serous Drainage</span>
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={dressingFormData.drainageTypes.serosanguinousFluid}
-                          onChange={(e) => setDressingFormData({
-                            ...dressingFormData,
-                            drainageTypes: {
-                              ...dressingFormData.drainageTypes,
-                              serosanguinousFluid: e.target.checked
-                            }
-                          })}
-                          className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          disabled={!isUnlocked}
-                        />
-                        <span className="text-sm text-gray-700">Serosanguinous Fluid</span>
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={dressingFormData.drainageTypes.purulentDrainage}
-                          onChange={(e) => setDressingFormData({
-                            ...dressingFormData,
-                            drainageTypes: {
-                              ...dressingFormData.drainageTypes,
-                              purulentDrainage: e.target.checked
-                            }
-                          })}
-                          className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          disabled={!isUnlocked}
-                        />
-                        <span className="text-sm text-gray-700">Purulent Drainage</span>
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={dressingFormData.drainageTypes.urine}
-                          onChange={(e) => setDressingFormData({
-                            ...dressingFormData,
-                            drainageTypes: {
-                              ...dressingFormData.drainageTypes,
-                              urine: e.target.checked
-                            }
-                          })}
-                          className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          disabled={!isUnlocked}
-                        />
-                        <span className="text-sm text-gray-700">Urine</span>
-                      </label>
-                    </div>
                   </div>
+                </div>
+                <button
+                  type="submit"
+                  className={`w-full py-2 px-4 rounded-lg font-medium transition-colors duration-200 ${
+                    isUnlocked 
+                      ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                      : 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                  }`}
+                  disabled={!isUnlocked}
+                >
+                  Add Urine Entry
+                </button>
+              </form>
+            </div>
 
-                  <button
-                    type="submit"
-                    className={`w-full py-2 px-4 rounded-lg font-medium transition-colors duration-200 ${
-                      isUnlocked 
-                        ? 'bg-yellow-500 text-white hover:bg-yellow-600' 
-                        : 'bg-gray-400 text-gray-600 cursor-not-allowed'
-                    }`}
+            {/* Dressing Change Form */}
+            <div className={`bg-white rounded-xl shadow-lg p-6 mt-6 transition-opacity duration-300 ${!isUnlocked ? 'opacity-50 pointer-events-none' : ''}`}>
+              <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                Add New Dressing Change Entry
+              </h2>
+              <form onSubmit={handleDressingSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Entered By
+                  </label>
+                  <select
+                    value={dressingFormData.enteredBy}
+                    onChange={(e) => setDressingFormData({...dressingFormData, enteredBy: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
                     disabled={!isUnlocked}
                   >
-                    Add Dressing Entry
-                  </button>
-                </form>
+                    <option value="">Select person</option>
+                    <option value="Joe">Joe</option>
+                    <option value="Tori">Tori</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <Calendar className="w-4 h-4 mr-1" />
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    value={dressingFormData.date}
+                    onChange={(e) => setDressingFormData({...dressingFormData, date: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                    disabled={!isUnlocked}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <Clock className="w-4 h-4 mr-1" />
+                    Time
+                  </label>
+                  <input
+                    type="time"
+                    value={dressingFormData.time}
+                    onChange={(e) => setDressingFormData({...dressingFormData, time: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                    disabled={!isUnlocked}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center">
+                    <Scale className="w-4 h-4 mr-1" />
+                    Weight (g)
+                  </label>
+                  <input
+                    type="text"
+                    value={dressingFormData.weight}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === '' || /^\d+$/.test(value)) {
+                        setDressingFormData({...dressingFormData, weight: value});
+                      }
+                    }}
+                    placeholder="Enter weight in grams"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    required
+                    disabled={!isUnlocked}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Drainage Types
+                  </label>
+                  <div className="space-y-2">
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={dressingFormData.drainageTypes.serousDrainage}
+                        onChange={(e) => setDressingFormData({
+                          ...dressingFormData,
+                          drainageTypes: {
+                            ...dressingFormData.drainageTypes,
+                            serousDrainage: e.target.checked
+                          }
+                        })}
+                        className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        disabled={!isUnlocked}
+                      />
+                      <span className="text-sm text-gray-700">Serous Drainage</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={dressingFormData.drainageTypes.serosanguinousFluid}
+                        onChange={(e) => setDressingFormData({
+                          ...dressingFormData,
+                          drainageTypes: {
+                            ...dressingFormData.drainageTypes,
+                            serosanguinousFluid: e.target.checked
+                          }
+                        })}
+                        className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        disabled={!isUnlocked}
+                      />
+                      <span className="text-sm text-gray-700">Serosanguinous Fluid</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={dressingFormData.drainageTypes.purulentDrainage}
+                        onChange={(e) => setDressingFormData({
+                          ...dressingFormData,
+                          drainageTypes: {
+                            ...dressingFormData.drainageTypes,
+                            purulentDrainage: e.target.checked
+                          }
+                        })}
+                        className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        disabled={!isUnlocked}
+                      />
+                      <span className="text-sm text-gray-700">Purulent Drainage</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={dressingFormData.drainageTypes.urine}
+                        onChange={(e) => setDressingFormData({
+                          ...dressingFormData,
+                          drainageTypes: {
+                            ...dressingFormData.drainageTypes,
+                            urine: e.target.checked
+                          }
+                        })}
+                        className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        disabled={!isUnlocked}
+                      />
+                      <span className="text-sm text-gray-700">Urine</span>
+                    </label>
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  className={`w-full py-2 px-4 rounded-lg font-medium transition-colors duration-200 ${
+                    isUnlocked 
+                      ? 'bg-yellow-500 text-white hover:bg-yellow-600' 
+                      : 'bg-gray-400 text-gray-600 cursor-not-allowed'
+                  }`}
+                  disabled={!isUnlocked}
+                >
+                  Add Dressing Entry
+                </button>
+              </form>
+            </div>
+          </div>
+
+          {/* Data Section */}
+          <div className="lg:col-span-2">
+            {/* Daily Hourly Average Trend Chart */}
+            <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                <TrendingUp className="w-5 h-5 mr-2 text-yellow-500" />
+                Daily Hourly Average Trend (mL/hour)
+              </h2>
+              
+              {entries.length === 0 ? (
+                <div className="h-64 flex items-center justify-center text-gray-500">
+                  No data available for trending
+                </div>
+              ) : (
+                <div className="relative overflow-x-auto">
+                  {/* Chart container with proper margins for labels */}
+                  <div className="relative h-64 ml-16 mr-8 mt-8 mb-8" style={{ minWidth: `${Math.max(getDailyHourlyData().length * 80, 400)}px` }}>
+                    {/* Y-axis labels - positioned outside the chart area */}
+                    <div className="absolute -left-14 top-0 bottom-0 flex flex-col justify-between text-xs text-gray-500">
+                      <span>35</span>
+                      <span>26</span>
+                      <span>18</span>
+                      <span>9</span>
+                      <span>0mL</span>
+                    </div>
+                    
+                    {/* Chart area with border */}
+                    <div className="relative h-full w-full border-l-2 border-b-2 border-gray-300">
+                    <svg className="absolute inset-0 w-full h-full">
+                      {/* Grid lines */}
+                      {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
+                        <line
+                          key={ratio}
+                          x1="0"
+                          y1={`${(1 - ratio) * 90 + 5}%`}
+                          x2="100%"
+                          y2={`${(1 - ratio) * 90 + 5}%`}
+                          stroke="#e5e7eb"
+                          strokeWidth="1"
+                          strokeDasharray="2,2"
+                        />
+                      ))}
+                      
+                      {/* Reference lines */}
+                      {/* Red line at 7.7ml */}
+                      <line
+                        x1="0"
+                        y1={`${(1 - (7.7 / 35)) * 90 + 5}%`}
+                        x2="100%"
+                        y2={`${(1 - (7.7 / 35)) * 90 + 5}%`}
+                        stroke="#ef4444"
+                        strokeWidth="2"
+                        strokeDasharray="5,5"
+                      />
+                      {/* Green line at 23.1ml */}
+                      <line
+                        x1="0"
+                        y1={`${(1 - (23.1 / 35)) * 90 + 5}%`}
+                        x2="100%"
+                        y2={`${(1 - (23.1 / 35)) * 90 + 5}%`}
+                        stroke="#22c55e"
+                        strokeWidth="2"
+                        strokeDasharray="5,5"
+                      />
+                      
+                      {/* Line path */}
+                      {getDailyHourlyData().length > 1 && [...getDailyHourlyData()].reverse().map((_, index, arr) => {
+                        if (index === arr.length - 1) return null;
+                        const current = arr[index];
+                        const next = arr[index + 1];
+                        
+                        const x1 = (index / (arr.length - 1)) * 90 + 5;
+                        const y1 = (1 - (Math.min(current.hourlyAverage, 35) / 35)) * 90 + 5;
+                        const x2 = ((index + 1) / (arr.length - 1)) * 90 + 5;
+                        const y2 = (1 - (Math.min(next.hourlyAverage, 35) / 35)) * 90 + 5;
+                        
+                        return (
+                          <line
+                            key={`line-${index}`}
+                            x1={`${x1}%`}
+                            y1={`${y1}%`}
+                            x2={`${x2}%`}
+                            y2={`${y2}%`}
+                            stroke="#eab308"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                          />
+                        );
+                      })}
+                      
+                      {/* Data points */}
+                      {[...getDailyHourlyData()].reverse().map((data, index, arr) => {
+                        const x = arr.length === 1 ? 50 : (index / (arr.length - 1)) * 90 + 5;
+                        const y = (1 - (Math.min(data.hourlyAverage, 35) / 35)) * 90 + 5;
+                        return (
+                          <g key={data.date}>
+                            <circle
+                              cx={`${x}%`}
+                              cy={`${y}%`}
+                              r="8"
+                              fill="#eab308"
+                              stroke="white"
+                              strokeWidth="4"
+                            />
+                            {/* Value labels above points */}
+                            <text
+                              x={`${x}%`}
+                              y={`${Math.max(y - 8, 2)}%`}
+                              textAnchor="middle"
+                              className="text-xs fill-gray-700 font-semibold"
+                            >
+                              {data.hourlyAverage}
+                            </text>
+                            {/* Tooltip on hover */}
+                            <title>{data.displayDate}: {data.hourlyAverage} mL/hr</title>
+                          </g>
+                        );
+                      })}
+                    </svg>
+                    </div>
+                    
+                    {/* X-axis labels - positioned outside the chart area */}
+                    <div className="absolute -bottom-2 left-0 right-0 text-xs text-gray-600 font-medium">
+                      {[...getDailyHourlyData()].reverse().map((data, index, arr) => {
+                        const x = arr.length === 1 ? 50 : (index / (arr.length - 1)) * 90 + 5;
+                        return (
+                          <div
+                            key={data.date}
+                            className="absolute transform -translate-x-1/2 text-center whitespace-nowrap"
+                            style={{ left: `${x}%` }}
+                          >
+                            {data.displayDate}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Urine Output Entries Table */}
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Urine Output Entries</h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs sm:text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700">Date</th>
+                      <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700 whitespace-nowrap">Time</th>
+                      <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700 break-words">Output Amount</th>
+                      <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700 break-words">Urine Color</th>
+                      <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700 break-words">Entered By</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {entries.length === 0 ? (
+                      <tr className="border-b border-gray-100">
+                        <td className="py-2 sm:py-3 px-1 sm:px-2 text-gray-500" colSpan={5}>
+                          <div className="text-center py-8">No entries recorded yet</div>
+                        </td>
+                      </tr>
+                    ) : (
+                      entries.slice(0, 10).map((entry) => (
+                        <tr key={entry.id} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-2 sm:py-3 px-1 sm:px-2">{new Date(entry.date + 'T00:00:00').toLocaleDateString('en-US')}</td>
+                          <td className="py-2 sm:py-3 px-1 sm:px-2 whitespace-nowrap">{new Date(`${entry.date}T${entry.time}`).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true })}</td>
+                          <td className="py-2 sm:py-3 px-1 sm:px-2 font-medium text-yellow-500">{entry.amount} mL</td>
+                          <td className="py-2 sm:py-3 px-1 sm:px-2">{entry.urineColor.length > 0 ? entry.urineColor.join(', ') : 'None'}</td>
+                          <td className="py-2 sm:py-3 px-1 sm:px-2">{entry.enteredBy}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
 
-            {/* Charts and Data */}
-            <div className="lg:col-span-2">
-              {/* Daily Hourly Average Trend Chart */}
-              <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
-                  <TrendingUp className="w-5 h-5 mr-2 text-yellow-500" />
-                  Daily Hourly Average Trend (mL/hour)
-                </h2>
-                
-                {entries.length === 0 ? (
-                  <div className="h-64 flex items-center justify-center text-gray-500">
-                    No data available for trending
-                  </div>
-                ) : (
-                  <div className="relative overflow-x-auto">
-                    {/* Chart container with proper margins for labels */}
-                    <div className="relative h-64 ml-16 mr-8 mt-8 mb-8" style={{ minWidth: `${Math.max(getDailyHourlyData().length * 80, 400)}px` }}>
-                      {/* Y-axis labels - positioned outside the chart area */}
-                      <div className="absolute -left-14 top-0 bottom-0 flex flex-col justify-between text-xs text-gray-500">
-                        <span>35</span>
-                        <span>26</span>
-                        <span>18</span>
-                        <span>9</span>
-                        <span>0mL</span>
-                      </div>
-                      
-                      {/* Chart area with border */}
-                      <div className="relative h-full w-full border-l-2 border-b-2 border-gray-300">
-                      <svg className="absolute inset-0 w-full h-full">
-                        {/* Grid lines */}
-                        {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
-                          <line
-                            key={ratio}
-                            x1="0"
-                            y1={`${(1 - ratio) * 90 + 5}%`}
-                            x2="100%"
-                            y2={`${(1 - ratio) * 90 + 5}%`}
-                            stroke="#e5e7eb"
-                            strokeWidth="1"
-                            strokeDasharray="2,2"
-                          />
-                        ))}
-                        
-                        {/* Reference lines */}
-                        {/* Red line at 7.7ml */}
-                        <line
-                          x1="0"
-                          y1={`${(1 - (7.7 / 35)) * 90 + 5}%`}
-                          x2="100%"
-                          y2={`${(1 - (7.7 / 35)) * 90 + 5}%`}
-                          stroke="#ef4444"
-                          strokeWidth="2"
-                          strokeDasharray="5,5"
-                        />
-                        {/* Green line at 23.1ml */}
-                        <line
-                          x1="0"
-                          y1={`${(1 - (23.1 / 35)) * 90 + 5}%`}
-                          x2="100%"
-                          y2={`${(1 - (23.1 / 35)) * 90 + 5}%`}
-                          stroke="#22c55e"
-                          strokeWidth="2"
-                          strokeDasharray="5,5"
-                        />
-                        
-                        {/* Line path */}
-                        {getDailyHourlyData().length > 1 && [...getDailyHourlyData()].reverse().map((_, index, arr) => {
-                          if (index === arr.length - 1) return null;
-                          const current = arr[index];
-                          const next = arr[index + 1];
-                          
-                          const x1 = (index / (arr.length - 1)) * 90 + 5;
-                          const y1 = (1 - (Math.min(current.hourlyAverage, 35) / 35)) * 90 + 5;
-                          const x2 = ((index + 1) / (arr.length - 1)) * 90 + 5;
-                          const y2 = (1 - (Math.min(next.hourlyAverage, 35) / 35)) * 90 + 5;
-                          
-                          return (
-                            <line
-                              key={`line-${index}`}
-                              x1={`${x1}%`}
-                              y1={`${y1}%`}
-                              x2={`${x2}%`}
-                              y2={`${y2}%`}
-                              stroke="#eab308"
-                              strokeWidth="3"
-                              strokeLinecap="round"
-                            />
-                          );
-                        })}
-                        
-                        {/* Data points */}
-                        {[...getDailyHourlyData()].reverse().map((data, index, arr) => {
-                          const x = arr.length === 1 ? 50 : (index / (arr.length - 1)) * 90 + 5;
-                          const y = (1 - (Math.min(data.hourlyAverage, 35) / 35)) * 90 + 5;
-                          return (
-                            <g key={data.date}>
-                              <circle
-                                cx={`${x}%`}
-                                cy={`${y}%`}
-                                r="8"
-                                fill="#eab308"
-                                stroke="white"
-                                strokeWidth="4"
-                              />
-                              {/* Value labels above points */}
-                              <text
-                                x={`${x}%`}
-                                y={`${Math.max(y - 8, 2)}%`}
-                                textAnchor="middle"
-                                className="text-xs fill-gray-700 font-semibold"
-                              >
-                                {data.hourlyAverage}
-                              </text>
-                              {/* Tooltip on hover */}
-                              <title>{data.displayDate}: {data.hourlyAverage} mL/hr</title>
-                            </g>
-                          );
-                        })}
-                      </svg>
-                      </div>
-                      
-                      {/* X-axis labels - positioned outside the chart area */}
-                      <div className="absolute -bottom-2 left-0 right-0 text-xs text-gray-600 font-medium">
-                        {[...getDailyHourlyData()].reverse().map((data, index, arr) => {
-                          const x = arr.length === 1 ? 50 : (index / (arr.length - 1)) * 90 + 5;
-                          return (
-                            <div
-                              key={data.date}
-                              className="absolute transform -translate-x-1/2 text-center whitespace-nowrap"
-                              style={{ left: `${x}%` }}
-                            >
-                              {data.displayDate}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Recent Entries Table */}
-              <div className="bg-white rounded-xl shadow-lg p-6">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">Urine Output Entries</h2>
-                
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs sm:text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700">Date</th>
-                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700 whitespace-nowrap">Time</th>
-                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700 break-words">Output Amount</th>
-                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700 break-words">Urine Color</th>
-                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700 break-words">Entered By</th>
+            {/* Dressing Change Entries Table */}
+            <div className="bg-white rounded-xl shadow-lg p-6 mt-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Dressing Change Entries</h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs sm:text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700">Date</th>
+                      <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700 whitespace-nowrap">Time</th>
+                      <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700 break-words">Leak Amount</th>
+                      <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700 break-words">Drainage Types</th>
+                      <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700 break-words">Entered By</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dressingEntries.length === 0 ? (
+                      <tr className="border-b border-gray-100">
+                        <td className="py-2 sm:py-3 px-1 sm:px-2 text-gray-500" colSpan={5}>
+                          <div className="text-center py-8">No dressing change entries recorded yet</div>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {entries.length === 0 ? (
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 sm:py-3 px-1 sm:px-2 text-gray-500" colSpan={5}>
-                            <div className="text-center py-8">No entries recorded yet</div>
+                    ) : (
+                      dressingEntries.slice(0, 10).map((entry) => (
+                        <tr key={entry.id} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-2 sm:py-3 px-1 sm:px-2">{new Date(entry.date + 'T00:00:00').toLocaleDateString('en-US')}</td>
+                          <td className="py-2 sm:py-3 px-1 sm:px-2 whitespace-nowrap">{new Date(`${entry.date}T${entry.time}`).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true })}</td>
+                          <td className={`py-2 sm:py-3 px-1 sm:px-2 font-medium ${entry.drainageTypes.includes('Urine') ? 'text-yellow-500' : 'text-black'}`}>
+                            {entry.weight} mL
                           </td>
+                          <td className="py-2 sm:py-3 px-1 sm:px-2">{entry.drainageTypes.length > 0 ? entry.drainageTypes.join(', ') : 'None'}</td>
+                          <td className="py-2 sm:py-3 px-1 sm:px-2">{entry.enteredBy}</td>
                         </tr>
-                      ) : (
-                        entries.slice(0, 10).map((entry) => (
-                          <tr key={entry.id} className="border-b border-gray-100 hover:bg-gray-50">
-                            <td className="py-2 sm:py-3 px-1 sm:px-2">{new Date(entry.date + 'T00:00:00').toLocaleDateString('en-US')}</td>
-                            <td className="py-2 sm:py-3 px-1 sm:px-2 whitespace-nowrap">{new Date(`${entry.date}T${entry.time}`).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true })}</td>
-                            <td className="py-2 sm:py-3 px-1 sm:px-2 font-medium text-yellow-500">{entry.amount} mL</td>
-                            <td className="py-2 sm:py-3 px-1 sm:px-2">{entry.urineColor.length > 0 ? entry.urineColor.join(', ') : 'None'}</td>
-                            <td className="py-2 sm:py-3 px-1 sm:px-2">{entry.enteredBy}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Dressing Change Entries Table */}
-              <div className="bg-white rounded-xl shadow-lg p-6 mt-6">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4">Dressing Change Entries</h2>
-                
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs sm:text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700">Date</th>
-                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700 whitespace-nowrap">Time</th>
-                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700 break-words">Leak Amount</th>
-                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700 break-words">Drainage Types</th>
-                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700 break-words">Entered By</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {dressingEntries.length === 0 ? (
-                        <tr className="border-b border-gray-100">
-                          <td className="py-2 sm:py-3 px-1 sm:px-2 text-gray-500" colSpan={5}>
-                            <div className="text-center py-8">No dressing change entries recorded yet</div>
-                          </td>
-                        </tr>
-                      ) : (
-                        dressingEntries.slice(0, 10).map((entry) => (
-                          <tr key={entry.id} className="border-b border-gray-100 hover:bg-gray-50">
-                            <td className="py-2 sm:py-3 px-1 sm:px-2">{new Date(entry.date + 'T00:00:00').toLocaleDateString('en-US')}</td>
-                            <td className="py-2 sm:py-3 px-1 sm:px-2 whitespace-nowrap">{new Date(`${entry.date}T${entry.time}`).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true })}</td>
-                            <td className={`py-2 sm:py-3 px-1 sm:px-2 font-medium ${entry.drainageTypes.includes('Urine') ? 'text-yellow-500' : 'text-black'}`}>
-                              {entry.weight} mL
-                            </td>
-                            <td className="py-2 sm:py-3 px-1 sm:px-2">{entry.drainageTypes.length > 0 ? entry.drainageTypes.join(', ') : 'None'}</td>
-                            <td className="py-2 sm:py-3 px-1 sm:px-2">{entry.enteredBy}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -1200,4 +1151,4 @@ function App() {
   );
 }
 
-export default App;
+export default App; 
