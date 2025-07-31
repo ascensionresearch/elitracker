@@ -494,7 +494,7 @@ function App() {
           {/* Passcode Field */}
           <div className="mt-6 max-w-md mx-auto">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              4-Digit Passcode
+              4-Digit Passcode (Only Needed for Data Entry)
             </label>
             <input
               type="password"
