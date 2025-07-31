@@ -13,6 +13,7 @@ interface OutputEntry {
   date: string;
   time: string;
   amount: number;
+  urineColor: string[];
   timestamp: number;
 }
 
@@ -144,6 +145,7 @@ function App() {
             date: nycDate,
             time: nycTime,
             amount: entry.amount,
+            urineColor: entry.urine_color ? entry.urine_color.split(',').filter((color: string) => color.trim() !== '') : [],
             timestamp: new Date(entry.timestamp).getTime()
           };
         });
@@ -200,7 +202,14 @@ function App() {
       minute: '2-digit',
       hour12: false
     }),
-    amount: ''
+    amount: '',
+    urineColors: {
+      clear: false,
+      yellow: false,
+      yellowGreen: false,
+      darkYellow: false,
+      yellowRed: false
+    }
   });
 
   // Form state for dressing change
@@ -245,6 +254,20 @@ function App() {
       return;
     }
 
+    // Get selected urine colors
+    const selectedUrineColors = Object.entries(urineFormData.urineColors)
+      .filter(([_, isSelected]) => isSelected)
+      .map(([type, _]: [string, boolean]) => {
+        switch (type) {
+          case 'clear': return 'Clear';
+          case 'yellow': return 'Yellow';
+          case 'yellowGreen': return 'Yellow-Green';
+          case 'darkYellow': return 'Dark Yellow';
+          case 'yellowRed': return 'Yellow-Red (Blood)';
+          default: return type;
+        }
+      });
+
     // Create timestamp treating the input as NYC time
     const timestamp = new Date(`${urineFormData.date}T${urineFormData.time}:00`);
     if (isNaN(timestamp.getTime())) {
@@ -262,6 +285,7 @@ function App() {
           {
             parent: urineFormData.enteredBy,
             amount: amount,
+            urine_color: selectedUrineColors.join(','),
             timestamp: utcTimestamp
           }
         ])
@@ -292,6 +316,7 @@ function App() {
           date: nycDate,
           time: nycTime,
           amount: data.amount,
+          urineColor: data.urine_color ? data.urine_color.split(',').filter((color: string) => color.trim() !== '') : [],
           timestamp: new Date(data.timestamp).getTime()
         };
 
@@ -304,7 +329,14 @@ function App() {
             hour: '2-digit',
             minute: '2-digit',
             hour12: false
-          })
+          }),
+          urineColors: {
+            clear: false,
+            yellow: false,
+            yellowGreen: false,
+            darkYellow: false,
+            yellowRed: false
+          }
         });
       }
     } catch (error) {
@@ -340,6 +372,8 @@ function App() {
           default: return type;
         }
       });
+
+
 
     // Create timestamp treating the input as NYC time
     const timestamp = new Date(`${dressingFormData.date}T${dressingFormData.time}:00`);
@@ -463,6 +497,7 @@ function App() {
       'Date': entry.date,
       'Time': convertTo12Hour(entry.time),
       'Amount (mL)': entry.amount,
+      'Urine Color': entry.urineColor.join(', '),
       'Entered By': entry.enteredBy,
       'Timestamp': formatTimestamp(entry.timestamp)
     }));
@@ -560,7 +595,7 @@ function App() {
           </div>
         </div>
 
-        <div className={`transition-opacity duration-300 ${!isUnlocked ? 'opacity-50 pointer-events-none' : ''}`}>
+        <div className="transition-opacity duration-300">
           {/* Calculation Information */}
         <div className="mb-8 bg-yellow-25 rounded-lg p-4 max-w-2xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
@@ -622,7 +657,7 @@ function App() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Input Form */}
             <div className="lg:col-span-1">
-              <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className={`bg-white rounded-xl shadow-lg p-6 transition-opacity duration-300 ${!isUnlocked ? 'opacity-50 pointer-events-none' : ''}`}>
                 <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
                   Add Urine Output New Entry
                 </h2>
@@ -693,6 +728,79 @@ function App() {
                     />
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Urine Color
+                    </label>
+                    <div className="space-y-2">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={urineFormData.urineColors.clear}
+                          onChange={(e) => setUrineFormData({
+                            ...urineFormData,
+                            urineColors: { ...urineFormData.urineColors, clear: e.target.checked }
+                          })}
+                          className="mr-2"
+                          disabled={!isUnlocked}
+                        />
+                        Clear
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={urineFormData.urineColors.yellow}
+                          onChange={(e) => setUrineFormData({
+                            ...urineFormData,
+                            urineColors: { ...urineFormData.urineColors, yellow: e.target.checked }
+                          })}
+                          className="mr-2"
+                          disabled={!isUnlocked}
+                        />
+                        Yellow
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={urineFormData.urineColors.yellowGreen}
+                          onChange={(e) => setUrineFormData({
+                            ...urineFormData,
+                            urineColors: { ...urineFormData.urineColors, yellowGreen: e.target.checked }
+                          })}
+                          className="mr-2"
+                          disabled={!isUnlocked}
+                        />
+                        Yellow-Green
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={urineFormData.urineColors.darkYellow}
+                          onChange={(e) => setUrineFormData({
+                            ...urineFormData,
+                            urineColors: { ...urineFormData.urineColors, darkYellow: e.target.checked }
+                          })}
+                          className="mr-2"
+                          disabled={!isUnlocked}
+                        />
+                        Dark Yellow
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={urineFormData.urineColors.yellowRed}
+                          onChange={(e) => setUrineFormData({
+                            ...urineFormData,
+                            urineColors: { ...urineFormData.urineColors, yellowRed: e.target.checked }
+                          })}
+                          className="mr-2"
+                          disabled={!isUnlocked}
+                        />
+                        Yellow-Red (Blood)
+                      </label>
+                    </div>
+                  </div>
+
                   <button
                     type="submit"
                     className={`w-full py-2 px-4 rounded-lg font-medium transition-colors duration-200 ${
@@ -708,7 +816,7 @@ function App() {
               </div>
 
               {/* Dressing Change Form */}
-              <div className="bg-white rounded-xl shadow-lg p-6 mt-6">
+              <div className={`bg-white rounded-xl shadow-lg p-6 mt-6 transition-opacity duration-300 ${!isUnlocked ? 'opacity-50 pointer-events-none' : ''}`}>
                 <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
                   Add New Dressing Change Entry
                 </h2>
@@ -1017,13 +1125,14 @@ function App() {
                         <th className="text-left py-3 px-2 font-medium text-gray-700">Date</th>
                         <th className="text-left py-3 px-2 font-medium text-gray-700">Time</th>
                         <th className="text-left py-3 px-2 font-medium text-gray-700">Output Amount</th>
+                        <th className="text-left py-3 px-2 font-medium text-gray-700">Urine Color</th>
                         <th className="text-left py-3 px-2 font-medium text-gray-700">Entered By</th>
                       </tr>
                     </thead>
                     <tbody>
                       {entries.length === 0 ? (
                         <tr className="border-b border-gray-100">
-                          <td className="py-3 px-2 text-gray-500" colSpan={4}>
+                          <td className="py-3 px-2 text-gray-500" colSpan={5}>
                             <div className="text-center py-8">No entries recorded yet</div>
                           </td>
                         </tr>
@@ -1033,6 +1142,7 @@ function App() {
                             <td className="py-3 px-2">{new Date(entry.date + 'T00:00:00').toLocaleDateString('en-US')}</td>
                             <td className="py-3 px-2">{new Date(`${entry.date}T${entry.time}`).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true })}</td>
                             <td className="py-3 px-2 font-medium text-yellow-500">{entry.amount} mL</td>
+                            <td className="py-3 px-2">{entry.urineColor.length > 0 ? entry.urineColor.join(', ') : 'None'}</td>
                             <td className="py-3 px-2">{entry.enteredBy}</td>
                           </tr>
                         ))

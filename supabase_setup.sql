@@ -3,6 +3,7 @@ CREATE TABLE IF NOT EXISTS urine_entries (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   parent TEXT NOT NULL,
   amount INTEGER NOT NULL,
+  urine_color TEXT DEFAULT '',
   timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

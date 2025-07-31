@@ -10,6 +10,7 @@ export interface UrineEntry {
   id: string
   parent: string
   amount: number
+  urine_color: string
   timestamp: string
   created_at?: string
 }
