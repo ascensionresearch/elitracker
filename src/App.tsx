@@ -1124,10 +1124,10 @@ function App() {
                     <thead>
                       <tr className="border-b border-gray-200">
                         <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700">Date</th>
-                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700">Time</th>
-                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700">Output Amount</th>
-                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700">Urine Color</th>
-                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700">Entered By</th>
+                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700 whitespace-nowrap">Time</th>
+                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700 break-words">Output Amount</th>
+                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700 break-words">Urine Color</th>
+                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700 break-words">Entered By</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1141,7 +1141,7 @@ function App() {
                         entries.slice(0, 10).map((entry) => (
                           <tr key={entry.id} className="border-b border-gray-100 hover:bg-gray-50">
                             <td className="py-2 sm:py-3 px-1 sm:px-2">{new Date(entry.date + 'T00:00:00').toLocaleDateString('en-US')}</td>
-                            <td className="py-2 sm:py-3 px-1 sm:px-2">{new Date(`${entry.date}T${entry.time}`).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true })}</td>
+                            <td className="py-2 sm:py-3 px-1 sm:px-2 whitespace-nowrap">{new Date(`${entry.date}T${entry.time}`).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true })}</td>
                             <td className="py-2 sm:py-3 px-1 sm:px-2 font-medium text-yellow-500">{entry.amount} mL</td>
                             <td className="py-2 sm:py-3 px-1 sm:px-2">{entry.urineColor.length > 0 ? entry.urineColor.join(', ') : 'None'}</td>
                             <td className="py-2 sm:py-3 px-1 sm:px-2">{entry.enteredBy}</td>
@@ -1162,10 +1162,10 @@ function App() {
                     <thead>
                       <tr className="border-b border-gray-200">
                         <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700">Date</th>
-                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700">Time</th>
-                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700">Leak Amount</th>
-                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700">Drainage Types</th>
-                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700">Entered By</th>
+                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700 whitespace-nowrap">Time</th>
+                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700 break-words">Leak Amount</th>
+                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700 break-words">Drainage Types</th>
+                        <th className="text-left py-2 sm:py-3 px-1 sm:px-2 font-medium text-gray-700 break-words">Entered By</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1179,7 +1179,7 @@ function App() {
                         dressingEntries.slice(0, 10).map((entry) => (
                           <tr key={entry.id} className="border-b border-gray-100 hover:bg-gray-50">
                             <td className="py-2 sm:py-3 px-1 sm:px-2">{new Date(entry.date + 'T00:00:00').toLocaleDateString('en-US')}</td>
-                            <td className="py-2 sm:py-3 px-1 sm:px-2">{new Date(`${entry.date}T${entry.time}`).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true })}</td>
+                            <td className="py-2 sm:py-3 px-1 sm:px-2 whitespace-nowrap">{new Date(`${entry.date}T${entry.time}`).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: true })}</td>
                             <td className={`py-2 sm:py-3 px-1 sm:px-2 font-medium ${entry.drainageTypes.includes('Urine') ? 'text-yellow-500' : 'text-black'}`}>
                               {entry.weight} mL
                             </td>
